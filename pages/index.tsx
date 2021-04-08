@@ -1,4 +1,5 @@
 import React from 'react';
+import { MongoClient } from 'mongodb';
 import { GetStaticProps } from 'next';
 import Head from 'next/head';
 import { Hero } from '../common/components/Hero';
@@ -37,6 +38,7 @@ const App = ({ data, error }: AppProps) => {
 };
 
 export const getStaticProps: GetStaticProps = async () => {
+  const hour = 3600;
   let data: AppProps['data'];
   let error: AppProps['error'];
 
@@ -48,7 +50,17 @@ export const getStaticProps: GetStaticProps = async () => {
     data = null;
   }
 
-  const hour = 3600;
+  const pressureValuesPerHour = data.pressure.map((entry) => {
+    return [entry.hour, entry.value];
+  });
+
+  const uri = `${process.env.MONGODB_URI}/liberec${process.env.MONGODB_URI_PARAMS}`;
+  const client = await MongoClient.connect(uri, { useUnifiedTopology: true });
+  await client
+    .db()
+    .collection('pressure')
+    .insertOne({ [data.date]: Object.fromEntries(pressureValuesPerHour) });
+  client.close();
 
   return {
     props: {
